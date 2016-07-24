@@ -37,8 +37,13 @@ def get_single_item_data(item_url):
         return item_name.string
 
 
-query = input('Search query: ')
-stripped_query = query.strip()
-print('You entered "' + stripped_query + '"')
-youtube_query = stripped_query.replace(' ', '+')
-youtube_crawler(youtube_query)
+def main():
+    query = input('Search query: ')
+    stripped_query = query.strip()
+    print('You entered "' + stripped_query + '"')
+    youtube_query = stripped_query.replace(' ', '+')
+    youtube_crawler(youtube_query)
+
+
+if __name__ == '__main__':
+    main()
