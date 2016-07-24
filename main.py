@@ -38,13 +38,15 @@ def get_single_item_data(item_url):
 
 
 def main():
-    query = input('Search query: ')
-    stripped_query = query.strip()
-    while len(stripped_query) == 0:
-        print('Please enter valid search query again!')
-        query = input('Search query: ')
+    stripped_query = ''
+    while True:
+        query = str(input('Search query: '))
         stripped_query = query.strip()
-    print('You entered "' + stripped_query + '"')
+        if len(stripped_query) == 0:
+            print('Please enter valid search query again!')
+        else:
+            break
+    print('You entered "' + stripped_query + '"\n')
     youtube_query = stripped_query.replace(' ', '+')
     youtube_crawler(youtube_query)
 
