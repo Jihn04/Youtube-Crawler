@@ -40,6 +40,10 @@ def get_single_item_data(item_url):
 def main():
     query = input('Search query: ')
     stripped_query = query.strip()
+    while len(stripped_query) == 0:
+        print('Please enter valid search query again!')
+        query = input('Search query: ')
+        stripped_query = query.strip()
     print('You entered "' + stripped_query + '"')
     youtube_query = stripped_query.replace(' ', '+')
     youtube_crawler(youtube_query)
