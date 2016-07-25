@@ -1,44 +1,78 @@
 import requests
 from bs4 import BeautifulSoup
+import threading
+from queue import Queue
 
 
 # For example, search query: adele hello
 # 'https://www.youtube.com/results?search_query=adele+hello'
-BASE_URL = 'https://youtube.com/results?search_query='
+DOMAIN_NAME = r'https://youtube.com'
+BASE_URL = DOMAIN_NAME + r'/results?search_query='
+
+OUTPUT_FILE = r'crawled/crawled.txt'
+NUMBER_OF_THREADS = 8
+queue = Queue()
 
 
-def youtube_crawler(search_query):
+def crawl_search_list(search_query):
     url = BASE_URL + search_query
     source_code = requests.get(url)
     plain_text = source_code.text
     soup = BeautifulSoup(plain_text, 'html.parser')
-    output_file = r'crawled/crawled.txt'
-    open(output_file, 'w').close()
     for link in soup.findAll('a', {'class': 'yt-uix-sessionlink yt-uix-tile-'
-                                   'link yt-ui-ellipsis yt-ui-ellipsis-2 spf'
-                                   '-link '}):
-        href = 'https://youtube.com' + link.get('href')
-        title = link.string
-        view_count = get_single_item_data(href)
-        print(href)
-        print(title)
-        print(view_count + '\n')
-        with open(output_file, 'a') as f:
-            f.write(href + '\n')
-            f.write(title + '\n')
-            f.write(view_count + '\n\n')
+                                            'link yt-ui-ellipsis yt-ui-ellips'
+                                            'is-2 spf-link '}):
+        href = DOMAIN_NAME + link.get('href')
+        queue.put(href)
+    queue.join()
 
 
-def get_single_item_data(item_url):
-    source_code = requests.get(item_url)
+def crawl_detail(url):
+    results = dict()
+    source_code = requests.get(url)
     plain_text = source_code.text
     soup = BeautifulSoup(plain_text, 'html.parser')
-    for item_name in soup.findAll('div', {'class': 'watch-view-count'}):
-        return item_name.string
+
+    # Url
+    results['url'] = url
+
+    # Watch Title
+    watch_title_tag = soup.find('span', {'class': 'watch-title'})
+    results['watch_title'] = watch_title_tag.string.strip()
+
+    # View Count
+    view_count_tag = soup.find('div', {'class': 'watch-view-count'})
+    results['view_count'] = view_count_tag.string.strip()
+
+    return results
+
+
+def write_to_file(data, file):
+    with open(file, 'a') as f:
+        for item in data.values():
+            f.write(str(item) + '\n')
+        f.write('\n')
+
+
+def create_workers():
+    for _ in range(NUMBER_OF_THREADS):
+        t = threading.Thread(target=work)
+        t.daemon = True
+        t.start()
+
+
+def work():
+    while True:
+        url = queue.get()
+        print(url)
+        results = crawl_detail(url)
+        write_to_file(results, OUTPUT_FILE)
+        queue.task_done()
 
 
 def main():
     stripped_query = ''
+    open(OUTPUT_FILE, 'w').close()
     while True:
         query = str(input('Search query: '))
         stripped_query = query.strip()
@@ -48,7 +82,8 @@ def main():
             break
     print('You entered "' + stripped_query + '"\n')
     youtube_query = stripped_query.replace(' ', '+')
-    youtube_crawler(youtube_query)
+    create_workers()
+    crawl_search_list(youtube_query)
 
 
 if __name__ == '__main__':
