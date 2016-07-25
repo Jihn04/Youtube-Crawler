@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import threading
 from queue import Queue
+from urllib.parse import urlparse, parse_qs
+from general import *
 
 
 # For example, search query: adele hello
@@ -9,9 +11,9 @@ from queue import Queue
 DOMAIN_NAME = r'https://youtube.com'
 BASE_URL = DOMAIN_NAME + r'/results?search_query='
 
-OUTPUT_FILE = r'crawled/crawled.txt'
 NUMBER_OF_THREADS = 8
 queue = Queue()
+metadata = dict()
 
 
 def crawl_search_list(search_query):
@@ -28,30 +30,36 @@ def crawl_search_list(search_query):
 
 
 def crawl_detail(url):
-    results = dict()
+    parsed_url = urlparse(url)
+    parsed_query = parse_qs(parsed_url.query)
+    vid = parsed_query['v'][0]
+    metadata[vid] = dict()
+
     source_code = requests.get(url)
     plain_text = source_code.text
     soup = BeautifulSoup(plain_text, 'html.parser')
 
     # Url
-    results['url'] = url
+    metadata[vid]['url'] = url
 
     # Watch Title
     watch_title_tag = soup.find('span', {'class': 'watch-title'})
-    results['watch_title'] = watch_title_tag.string.strip()
+    metadata[vid]['watch_title'] = watch_title_tag.string.strip()
 
     # View Count
     view_count_tag = soup.find('div', {'class': 'watch-view-count'})
-    results['view_count'] = view_count_tag.string.strip()
-
-    return results
+    metadata[vid]['view_count'] = view_count_tag.string.strip()
 
 
-def write_to_file(data, file):
-    with open(file, 'a') as f:
-        for item in data.values():
-            f.write(str(item) + '\n')
-        f.write('\n')
+def dump_file():
+    create_project_dir()
+    create_data_file()
+    delete_file_contents('crawled/crawled.txt')
+    for vid, video in metadata.items():
+        append_to_file('crawled/crawled.txt', vid)
+        for data in video.values():
+            append_to_file('crawled/crawled.txt', data)
+        append_to_file('crawled/crawled.txt', '')
 
 
 def create_workers():
@@ -65,14 +73,12 @@ def work():
     while True:
         url = queue.get()
         print(url)
-        results = crawl_detail(url)
-        write_to_file(results, OUTPUT_FILE)
+        crawl_detail(url)
         queue.task_done()
 
 
 def main():
     stripped_query = ''
-    open(OUTPUT_FILE, 'w').close()
     while True:
         query = str(input('Search query: '))
         stripped_query = query.strip()
@@ -84,6 +90,7 @@ def main():
     youtube_query = stripped_query.replace(' ', '+')
     create_workers()
     crawl_search_list(youtube_query)
+    dump_file()
 
 
 if __name__ == '__main__':
