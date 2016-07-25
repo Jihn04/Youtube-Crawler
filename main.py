@@ -4,6 +4,7 @@ import threading
 from queue import Queue
 from urllib.parse import urlparse, parse_qs
 from general import *
+import json
 
 
 # For example, search query: adele hello
@@ -62,6 +63,12 @@ def dump_file():
         append_to_file('crawled/crawled.txt', '')
 
 
+def dump_json():
+    create_project_dir()
+    with open('crawled/crawled.json', 'w') as f:
+        json.dump(metadata, f, sort_keys=True, indent=4, ensure_ascii=False)
+
+
 def create_workers():
     for _ in range(NUMBER_OF_THREADS):
         t = threading.Thread(target=work)
@@ -86,11 +93,12 @@ def main():
             print('Please enter valid search query again!')
         else:
             break
-    print('You entered "' + stripped_query + '"\n')
+    print('You entered "' + stripped_query)
     youtube_query = stripped_query.replace(' ', '+')
     create_workers()
     crawl_search_list(youtube_query)
     dump_file()
+    dump_json()
 
 
 if __name__ == '__main__':
