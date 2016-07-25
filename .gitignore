@@ -1,3 +1,5 @@
-.idea
-crawled
-venv
+.idea/
+crawled/
+venv/
+*.pyc
+__pycache__/
